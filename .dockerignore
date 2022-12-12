@@ -1,0 +1,15 @@
+# Environment keys
+.env
+
+# vscode
+.vscode/
+
+# Python
+__pycache__/
+
+# git
+.git
+.gitignore
+
+# github
+.github

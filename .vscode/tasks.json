@@ -1,0 +1,10 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run the bot",
+			"type": "shell",
+			"command": "python ${workspaceFolder}/src/main.py",
+		}
+	]
+}
