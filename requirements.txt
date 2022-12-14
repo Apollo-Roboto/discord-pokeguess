@@ -2,6 +2,6 @@ PyYAML
 jsonschema
 python-dotenv
 requests
-psutil
-discord.py==2.0.1
+discord.py==2.1.0
 discord-ext-prometheus
+pillow==9.3.0

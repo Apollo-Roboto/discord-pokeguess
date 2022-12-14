@@ -2,8 +2,10 @@ from pathlib import Path
 from pkgutil import iter_modules
 from importlib import import_module
 import inspect
-
+import logging
 from discord.ext.commands import Bot
+
+log = logging.getLogger(__name__)
 
 async def add_cogs(bot: Bot):
 	"""
@@ -30,5 +32,5 @@ async def add_cogs(bot: Bot):
 			if(key.endswith('Controller') and inspect.isclass(value)):
 
 				# Add controller to the bot
-				print(f'Loading controller {value.__name__}')
+				log.info(f'Loading controller {value.__name__}')
 				await bot.add_cog(value(bot))

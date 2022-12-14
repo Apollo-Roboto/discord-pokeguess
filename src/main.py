@@ -20,9 +20,15 @@ log = logging.getLogger(__name__)
 async def main():
 	load_dotenv()
 
+	intents = Intents()
+	intents.members = True
+	intents.guilds = True
+	intents.guild_messages = True
+	intents.message_content = True
+
 	bot = commands.AutoShardedBot(
 		command_prefix='!',
-		intents=Intents.all(),
+		intents=intents,
 		help_command=None,
 	)
 
@@ -30,12 +36,12 @@ async def main():
 
 	await controllers.add_cogs(bot)
 
-	print("App Commands:")
+	log.info("App Commands:")
 	for command in bot.tree.walk_commands():
-		print(f'\t{command.name}')
-	print("Commands:")
+		log.info(f'\t{command.name}')
+	log.info("Commands:")
 	for command in bot.walk_commands():
-		print(f'\t{command.name}')
+		log.info(f'\t{command.name}')
 
 	await bot.start(os.environ['DISCORD_BOT_TOKEN'])
 

@@ -127,3 +127,19 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+
+
+# ---------------------- #
+
+# images
+pokemons/hidden/*.png
+pokemons/hidden/*.jpg
+pokemons/originals/*.png
+pokemons/originals/*.jpg
+pokemons/revealed/*.png
+pokemons/revealed/*.jpg
+
+# cached pokedex
+pokemons/pokedex.json
