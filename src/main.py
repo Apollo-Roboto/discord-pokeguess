@@ -3,7 +3,7 @@ import asyncio
 import os
 import sys
 from discord.ext import commands
-from discord import Intents
+from discord import Intents, Interaction, InteractionType
 from discord.ext.prometheus import PrometheusCog, PrometheusLoggingHandler
 from dotenv import load_dotenv
 import controllers
@@ -42,6 +42,16 @@ async def main():
 	log.info("Commands:")
 	for command in bot.walk_commands():
 		log.info(f'\t{command.name}')
+
+	@bot.listen()
+	async def on_interaction(interaction: Interaction):
+		# command name can be None if comming from a view (like a button click)
+
+		text = f'Interaction ({str(interaction.type.name)})'
+		if interaction.type == InteractionType.application_command:
+			text += f' {interaction.command.name} id:{interaction.data["id"]}'
+
+		log.info(text)
 
 	await bot.start(os.environ['DISCORD_BOT_TOKEN'])
 

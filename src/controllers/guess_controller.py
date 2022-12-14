@@ -13,7 +13,7 @@ log = logging.getLogger(__name__.removesuffix('_controller'))
 
 class GuessController(commands.Cog):
 
-	def __init__(self, bot):
+	def __init__(self, bot: commands.Bot):
 		self.bot = bot
 		self.guesserService = GuesserService()
 
@@ -41,11 +41,21 @@ class GuessController(commands.Cog):
 	])
 	async def pokeguess_command(self, interaction: Interaction, generation: Choice[int] = None, timeout: Range[int, 15, 300] = 60) -> None:
 
+		# do I have permission to read and send messages here
+		permissions = interaction.channel.permissions_for(interaction.guild.me)
+		if permissions.read_messages == False or permissions.send_messages == False:
+			log.info('Missing permissions on this channel')
+			embed = guess_view.MissingPermissionsEmbed()
+			await interaction.response.send_message(embed=embed, ephemeral=True)
+			return
+
+		# is there a running guesser here?
 		if self.guesserService.get_guesser(interaction.channel) != None:
 			embed = guess_view.AlreadyActiveEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
 		
+		# max 5 minutes
 		if timeout > 300:
 			embed = guess_view.InvalidTimeoutEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -53,37 +63,26 @@ class GuessController(commands.Cog):
 
 		id_range = (0, 905)
 
-		log.info(f'generation: {generation}')
-
 		if generation == None:
 			generation = Choice(name='All', value=0)
 		
 		if generation.value == 0: # all
-			log.info('got all')
 			id_range = (0, 905)
 		elif generation.value == 1:
-			log.info('got generation 1')
 			id_range = (0, 151)
 		elif generation.value == 2:
-			log.info('got generation 2')
 			id_range = (152, 251)
 		elif generation.value == 3:
-			log.info('got generation 3')
 			id_range = (252, 386)
 		elif generation.value == 4:
-			log.info('got generation 4')
 			id_range = (387, 493)
 		elif generation.value == 5:
-			log.info('got generation 5')
 			id_range = (494, 649)
 		elif generation.value == 6:
-			log.info('got generation 6')
 			id_range = (650, 721)
 		elif generation.value == 7:
-			log.info('got generation 7')
 			id_range = (722, 809)
 		elif generation.value == 8:
-			log.info('got generation 8')
 			id_range = (810, 905)
 
 		choice = random.randint(*id_range)
@@ -121,12 +120,25 @@ class GuessController(commands.Cog):
 		
 		guesser.total_guesses += 1
 
+		content = message.content.strip().lower()
+
 		# if guess is right
-		if message.content.strip().lower() == guesser.pokemon.name.lower():
+		if content == guesser.pokemon.name.lower():
 
 			guesser.winner = message.author
 
 			await self.guesserService.end_guesser(message.channel)
+			return
+
+		# TODO Encourage when a user says they don't know
+		# if content == 'idk' or content == 'i don\'t know':
+		# 	if random.random() > 0.75:
+		# 		await message.channel.send('Keep trying!')
+
+		# TODO Send a hint if the user is requesting it
+		# if content == 'give me a hint' or content == 'I need help':
+		# 	await message.channel.send('it's from the generation x')
+		# 	await message.channel.send('the first letter is x')
 
 
 

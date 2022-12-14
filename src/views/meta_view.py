@@ -1,16 +1,5 @@
-from discord import Embed, Color, Member, ButtonStyle
+from discord import Member, ButtonStyle
 import discord
-
-color = Color.from_str('#2f3136')
-
-class InviteEmbed(Embed):
-	def __init__(self, bot: Member):
-		super().__init__()
-
-		self.color = color
-		self.title = 'Invite PokeGuess to your servers!'
-
-		self.set_thumbnail(url=bot.display_avatar.url)
 
 
 

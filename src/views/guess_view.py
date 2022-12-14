@@ -38,6 +38,14 @@ def corruptEmbed(embed: Embed):
 
 
 
+class MissingPermissionsEmbed(Embed):
+	def __init__(self):
+		super().__init__()
+		self.color = error_color
+		self.title = 'I do not have permissions to read or write messages here. Try in another channel.'
+
+
+
 class InvalidTimeoutEmbed(Embed):
 	def __init__(self):
 		super().__init__()

@@ -1,16 +1,15 @@
 version: '3.8'
-name: bot
+name: PokeGuess
 services:
 
   discord-bot:
     build: ./
     environment:
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
-      - DISCORD_APPLICATION_ID=${DISCORD_APPLICATION_ID}
     volumes:
       - type: volume
-        source: botConfig
-        target: /app/config
+        source: pokemonData
+        target: /app/pokemons
 
 volumes:
-  botConfig:
+  pokemonData:

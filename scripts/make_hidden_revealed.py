@@ -9,14 +9,14 @@ SOURCE_DIR = Path('./pokemons/originals/')
 HIDDEN_DIR = Path('./pokemons/hidden/')
 REVEALED_DIR = Path('./pokemons/revealed/')
 
-BACKGROUND_PATH = Path('./pokemons/background.png')
+BACKGROUND_PATH = Path('./resources/background.png')
 IMAGE_SIZE = (260, 260)
 
 MAIN_COLOR = (16, 88, 178, 255)
 OUTLINE_COLOR = (20, 62, 135, 255)
 OUTLINE_OFFSET = (-1, -1)
-SHADOW_COLOR = (0, 0, 0, 125)
-SHADOW_OFFSET = (-7, 9)
+SHADOW_COLOR = (0, 0, 0, 135)
+SHADOW_OFFSET = (-6, 8)
 
 
 
