@@ -10,6 +10,8 @@ services:
       - type: volume
         source: pokemonData
         target: /app/pokemons
+    ports:
+      - 8001:8000
 
 volumes:
   pokemonData:
