@@ -70,11 +70,11 @@ class ImageService:
 			img_center = (int(img.size[0]/2), int(img.size[1]/2))
 
 			offset = (
-				center[0]-img_center[0],
-				center[1]-img_center[1]
+				center[0] - img_center[0],
+				center[1] - img_center[1]
 			)
 
-			result.paste(img, mask=img, box=offset)
+			result.alpha_composite(img, dest=offset)
 
 		return result
 
@@ -105,7 +105,6 @@ class ImageService:
 
 	def process_image(self, original_path: Path, hidden_path: Path, revealed_path: Path):
 		log.info(f'Starting to process {original_path}')
-
 		start_time = datetime.now()
 
 		# Creating output directories
