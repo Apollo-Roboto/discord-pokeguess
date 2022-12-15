@@ -76,7 +76,8 @@ class HiddenEmbed(Embed):
 
 		self.description = 'Ends ' + datetime_to_discord_timestamp(guesser.end_time)
 
-		self.set_footer(text=f'Custom image from {guesser.author.display_name}')
+		if guesser.custom:
+			self.set_footer(text=f'Custom image from {guesser.author.display_name}')
 
 		self.set_image(url=f'attachment://{image_file.filename}')
 
