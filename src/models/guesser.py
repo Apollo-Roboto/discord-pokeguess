@@ -9,5 +9,7 @@ class Guesser:
 	pokemon: Pokemon
 	start_time: datetime
 	end_time: datetime
+	custom: bool
+	author: Member
 	total_guesses: int = 0
 	winner: Member = None

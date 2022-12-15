@@ -46,6 +46,7 @@ class GuesserService:
 					name=splitted_name[1],
 					hidden_img_path=Path(HIDDEN_IMG_DIR, file),
 					revealed_img_path=Path(REVEALED_IMG_DIR, file),
+					original_img_path=None, # Hiding it
 				)
 
 		log.error(f'Pokemon #{pokemon_id} not found')

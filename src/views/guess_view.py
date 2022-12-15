@@ -73,7 +73,10 @@ class HiddenEmbed(Embed):
 
 		self.color = hidden_color
 		self.title = 'Who\'s That Pokemon?'
+
 		self.description = 'Ends ' + datetime_to_discord_timestamp(guesser.end_time)
+
+		self.set_footer(text=f'Custom image from {guesser.author.display_name}')
 
 		self.set_image(url=f'attachment://{image_file.filename}')
 
@@ -89,8 +92,8 @@ class RevealedEmbed(Embed):
 		self.color = revealed_color
 		self.title = f'It\'s {guesser.pokemon.name}!'
 
-		number = guesser.pokemon.id if guesser.pokemon.id != None else 'Custom'
-		self.add_field(name='Number', value=f'#{number}')
+		number = 'Custom' if guesser.custom else f'#{guesser.pokemon.id}'
+		self.add_field(name='Number', value=number)
 		self.add_field(name='Total Guesses', value=guesser.total_guesses)
 
 		self.set_image(url=f'attachment://{image_file.filename}')

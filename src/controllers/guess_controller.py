@@ -96,6 +96,7 @@ class GuessController(commands.Cog):
 			name=name,
 			hidden_img_path=hidden_file_path,
 			revealed_img_path=revealed_file_path,
+			original_img_path=file_path,
 		)
 
 		# Create the guesser
@@ -106,6 +107,8 @@ class GuessController(commands.Cog):
 			pokemon=pokemon,
 			start_time=now,
 			end_time=now + timedelta(seconds=timeout),
+			custom=True,
+			author=interaction.user,
 		)
 
 		try:
@@ -200,6 +203,8 @@ class GuessController(commands.Cog):
 			pokemon=pokemon,
 			start_time=now,
 			end_time=now + timedelta(seconds=timeout),
+			custom=False,
+			author=interaction.user,
 		)
 
 		self.guesserService.add_guesser(guesser)
@@ -254,5 +259,16 @@ class GuessController(commands.Cog):
 			file = File(guesser.pokemon.revealed_img_path)
 			embed = guess_view.RevealedEmbed(guesser, file)
 			await guesser.channel.send(embed=embed, file=file)
+
+			# Clean up custom pokemon
+			if guesser.custom:
+				log.info('Removing custom Pokemon')
+				try:
+					os.remove(guesser.pokemon.hidden_img_path)
+					os.remove(guesser.pokemon.revealed_img_path)
+					os.remove(guesser.pokemon.original_img_path)
+				except OSError as e:
+					log.exception('Could not remove custom pokemon')
+
 		except discord.errors.NotFound:
 			log.warn(f'The channel {guesser.channel.id} could not be found')
