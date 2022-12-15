@@ -38,6 +38,22 @@ def corruptEmbed(embed: Embed):
 
 
 
+class GenericErrorEmbed(Embed):
+	def __init__(self):
+		super().__init__()
+		self.color = error_color
+		self.title = 'An error happened, I Couldn\'t start the game'
+
+
+
+class InvalidMediaTypeEmbed(Embed):
+	def __init__(self):
+		super().__init__()
+		self.color = error_color
+		self.title = 'Invalid image type, try to use a PNG with transparency.'
+
+
+
 class MissingPermissionsEmbed(Embed):
 	def __init__(self):
 		super().__init__()
@@ -50,7 +66,7 @@ class InvalidTimeoutEmbed(Embed):
 	def __init__(self):
 		super().__init__()
 		self.color = error_color
-		self.title = 'A guessing game is already active.'
+		self.title = 'Use A timeout between 15 and 300 seconds'
 
 
 

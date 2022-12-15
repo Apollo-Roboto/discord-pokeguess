@@ -21,6 +21,8 @@ ORIGINAL_DIR_TMP = Path(tempfile.gettempdir(), 'custompokemon', 'originals')
 REVEALED_DIR_TMP = Path(tempfile.gettempdir(), 'custompokemon', 'revealed')
 HIDDEN_DIR_TMP = Path(tempfile.gettempdir(), 'custompokemon', 'hidden')
 
+
+
 class GuessController(commands.Cog):
 
 	def __init__(self, bot: commands.Bot):
@@ -30,6 +32,8 @@ class GuessController(commands.Cog):
 
 		# register the on_guess_end method to be called
 		self.guesserService.on_guesser_end_event.append(self.on_guess_end)
+
+
 
 	@app_commands.command(
 		name='pokeguesscustom',
@@ -67,8 +71,8 @@ class GuessController(commands.Cog):
 
 		# Only taking Images
 		if image.content_type not in allowed_content_type:
-			# TODO give this a proper embed response
-			await interaction.response.send_message('Invalid image type, try to use a PNG with transparency.')
+			embed = guess_view.InvalidMediaTypeEmbed()
+			await interaction.response.send_message(embed=embed)
 			return
 
 		# Create the file path
@@ -108,15 +112,15 @@ class GuessController(commands.Cog):
 			self.guesserService.add_guesser(guesser)
 		except GuesserServiceException:
 			log.exception('Could not add the guesser')
-			# TODO create a proper embed response
-			await interaction.response.send_message('An error happened, Coud not start the game')
+			embed = guess_view.GenericErrorEmbed()
+			await interaction.response.send_message(embed=embed)
 			return
 
 		# Send response
 		file = File(pokemon.hidden_img_path, filename='hidden.png')
 		embed = guess_view.HiddenEmbed(guesser, file)
 		await interaction.response.send_message(embed=embed, file=file)
-		
+
 
 
 	@app_commands.command(

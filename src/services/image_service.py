@@ -10,9 +10,6 @@ from PIL import Image
 
 log = logging.getLogger(__name__)
 
-# ORIGINAL_DIR = Path('./pokemons', 'originals')
-# REVEALED_DIR = Path('./pokemons', 'revealed')
-# HIDDEN_DIR = Path('./pokemons', 'hidden')
 
 
 BACKGROUND_PATH = Path('./resources/background.png')
@@ -23,7 +20,6 @@ OUTLINE_COLOR = (20, 62, 135, 255)
 OUTLINE_OFFSET = (-1, -1)
 SHADOW_COLOR = (0, 0, 0, 135)
 SHADOW_OFFSET = (-6, 8)
-
 
 
 
@@ -82,12 +78,31 @@ class ImageService:
 
 		return result
 
+
+
 	def get_background_image(self):
 		if self._background_image == None:
 			self._background_image = Image.open(BACKGROUND_PATH).resize(BACKGROUND_SIZE)
 
 		return self._background_image
-	
+
+
+
+	def scale(self, img: Image.Image, scale: tuple[int, int]):
+		"""Scales while preserving the image ratio"""
+		new_size = img.size
+
+		if img.size[0] > img.size[1]:
+			difference = scale[0] / img.size[0]
+			new_size = (scale[0], int(difference*img.size[1]))
+		else:
+			difference = scale[1] / img.size[1]
+			new_size = (int(difference*img.size[0]), scale[1])
+
+		return img.resize(new_size)
+
+
+
 	def process_image(self, original_path: Path, hidden_path: Path, revealed_path: Path):
 		log.info(f'Starting to process {original_path}')
 
@@ -97,10 +112,13 @@ class ImageService:
 		os.makedirs(hidden_path.parent, exist_ok=True)
 		os.makedirs(revealed_path.parent, exist_ok=True)
 
+		original_img = Image.open(original_path, 'r')
+		original_img = self.scale(original_img, POKEMON_SIZE)
+
 		# Create original image and scaling the canvas to the background
 		original_img = self.layer_images([
 			Image.new('RGBA', BACKGROUND_SIZE, (0,0,0,0)),
-			Image.open(original_path, 'r').resize(POKEMON_SIZE),
+			original_img,
 		])
 
 		background_img = self.get_background_image()
@@ -133,9 +151,9 @@ class ImageService:
 			pokemon_img,
 		])
 
-		logging.info(f'Saving {hidden_path}')
+		log.info(f'Saving {hidden_path}')
 		hidden_img.save(hidden_path)
-		logging.info(f'Saving {revealed_path}')
+		log.info(f'Saving {revealed_path}')
 		revealed_img.save(revealed_path)
 
 		log.info(f'Done [{datetime.now() - start_time}]')

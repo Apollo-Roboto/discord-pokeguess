@@ -7,6 +7,9 @@ from discord import Intents, Interaction, InteractionType
 from discord.ext.prometheus import PrometheusCog, PrometheusLoggingHandler
 from dotenv import load_dotenv
 import controllers
+from services.pokedex_service import PokedexService
+from services.image_service import ImageService
+from pathlib import Path
 
 logging.basicConfig(
 	stream=sys.stdout,
@@ -16,6 +19,33 @@ logging.basicConfig(
 )
 logging.getLogger().addHandler(PrometheusLoggingHandler())
 log = logging.getLogger(__name__)
+
+ORIGINAL_DIR = Path('./pokemons', 'originals')
+REVEALED_DIR = Path('./pokemons', 'revealed')
+HIDDEN_DIR = Path('./pokemons', 'hidden')
+
+def download_pokemon_images():
+	log.info('Downloading pokemon images')
+	PokedexService().download_all_pokemon()
+
+def process_pokemon_images():
+	log.info('Processing pokemon images')
+	imageService = ImageService()
+	for file in os.listdir(ORIGINAL_DIR):
+
+		original_path=Path(ORIGINAL_DIR, file)
+		hidden_path=Path(HIDDEN_DIR, file)
+		revealed_path=Path(REVEALED_DIR, file)
+
+		# Already processed, skipping
+		if hidden_path.exists() and revealed_path.exists():
+			continue
+
+		imageService.process_image(
+			original_path=original_path,
+			hidden_path=hidden_path,
+			revealed_path=revealed_path,
+		)
 
 async def main():
 	load_dotenv()
@@ -52,6 +82,10 @@ async def main():
 			text += f' {interaction.command.name} id:{interaction.data["id"]}'
 
 		log.info(text)
+
+	# Prepare the data before running the bot
+	download_pokemon_images()
+	process_pokemon_images()
 
 	await bot.start(os.environ['DISCORD_BOT_TOKEN'])
 
