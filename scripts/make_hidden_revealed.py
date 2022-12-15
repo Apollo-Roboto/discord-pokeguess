@@ -131,7 +131,7 @@ def main():
 			make_silhouette(original_img, MAIN_COLOR, (0,0)),
 		])
 
-		# scale and and up to create some compression/blur effect
+		# scale down and up to create some compression/blur effect
 		silhouette_img = silhouette_img.resize((150, 150)).resize(silhouette_img.size)
 
 		pokemon_img = layer_images([
@@ -139,7 +139,7 @@ def main():
 			original_img,
 		])
 
-		# scale and and up to create some compression/blur effect
+		# scale down and up to create some compression/blur effect
 		pokemon_img = pokemon_img.resize((150, 150)).resize(pokemon_img.size)
 
 		hidden_img = layer_images([

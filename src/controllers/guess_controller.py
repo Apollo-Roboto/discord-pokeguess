@@ -1,24 +1,123 @@
+import os
 from datetime import datetime, timedelta
 import random
+from pathlib import Path 
 import logging
 from discord.ext import commands
 from discord import app_commands, Interaction, File, Message
 from discord.app_commands import Choice, Range
 import discord
 from models.guesser import Guesser
+from models.pokemon import Pokemon
 from views import guess_view
-from services.guesser_service import GuesserService
+from services.guesser_service import GuesserService, GuesserServiceException
+from services.image_service import ImageService
+import tempfile
+import uuid
 
 log = logging.getLogger(__name__.removesuffix('_controller'))
+
+ORIGINAL_DIR_TMP = Path(tempfile.gettempdir(), 'custompokemon', 'originals')
+REVEALED_DIR_TMP = Path(tempfile.gettempdir(), 'custompokemon', 'revealed')
+HIDDEN_DIR_TMP = Path(tempfile.gettempdir(), 'custompokemon', 'hidden')
 
 class GuessController(commands.Cog):
 
 	def __init__(self, bot: commands.Bot):
 		self.bot = bot
 		self.guesserService = GuesserService()
+		self.imageService = ImageService()
 
 		# register the on_guess_end method to be called
 		self.guesserService.on_guesser_end_event.append(self.on_guess_end)
+
+	@app_commands.command(
+		name='pokeguesscustom',
+		description='Start a Pokemon guess with a custom image'
+	)
+	@app_commands.describe(
+		name='Name of your custom pokemon',
+		image='Image of your custom pokemon. Please use an image with transparency',
+		timeout='Guessing timeout in seconds',
+	)
+	async def pokeguesscustom(self, interaction: Interaction, name: str, image: discord.Attachment, timeout: Range[int, 15, 300] = 60):
+		
+		allowed_content_type = ['image/png']
+
+		# do I have permission to read and send messages here
+		permissions = interaction.app_permissions
+		if permissions.read_messages == False or permissions.send_messages == False:
+			embed = guess_view.MissingPermissionsEmbed()
+			await interaction.response.send_message(embed=embed, ephemeral=True)
+			return
+
+		# is there a running guesser here?
+		if self.guesserService.get_guesser(interaction.channel) != None:
+			embed = guess_view.AlreadyActiveEmbed()
+			await interaction.response.send_message(embed=embed, ephemeral=True)
+			return
+		
+		# max 5 minutes
+		if timeout > 300:
+			embed = guess_view.InvalidTimeoutEmbed()
+			await interaction.response.send_message(embed=embed, ephemeral=True)
+			return
+
+		log.info(f'Image: {image.filename} {image.width}x{image.height} {image.content_type} {image.size} bytes')
+
+		# Only taking Images
+		if image.content_type not in allowed_content_type:
+			# TODO give this a proper embed response
+			await interaction.response.send_message('Invalid image type, try to use a PNG with transparency.')
+			return
+
+		# Create the file path
+		file_extension = image.filename.split(".")[-1]
+		file_name = f'{uuid.uuid4()}.{file_extension}'
+		file_path = Path(ORIGINAL_DIR_TMP, file_name)
+		hidden_file_path = Path(HIDDEN_DIR_TMP, file_name)
+		revealed_file_path = Path(REVEALED_DIR_TMP, file_name)
+
+		# Saving this file
+		log.info(f'Saving {file_path}')
+		os.makedirs(ORIGINAL_DIR_TMP, exist_ok=True)
+		await image.save(file_path)
+
+		# Starting the process
+		self.imageService.process_image(file_path, hidden_file_path, revealed_file_path)
+		
+		# Create the pokemon
+		pokemon = Pokemon(
+			id=None,
+			name=name,
+			hidden_img_path=hidden_file_path,
+			revealed_img_path=revealed_file_path,
+		)
+
+		# Create the guesser
+		now = datetime.utcnow()
+
+		guesser = Guesser(
+			channel=interaction.channel,
+			pokemon=pokemon,
+			start_time=now,
+			end_time=now + timedelta(seconds=timeout),
+		)
+
+		try:
+			self.guesserService.add_guesser(guesser)
+		except GuesserServiceException:
+			log.exception('Could not add the guesser')
+			# TODO create a proper embed response
+			await interaction.response.send_message('An error happened, Coud not start the game')
+			return
+
+		# Send response
+		file = File(pokemon.hidden_img_path, filename='hidden.png')
+		embed = guess_view.HiddenEmbed(guesser, file)
+		await interaction.response.send_message(embed=embed, file=file)
+		
+
 
 	@app_commands.command(
 		name='pokeguess',
@@ -42,7 +141,7 @@ class GuessController(commands.Cog):
 	async def pokeguess_command(self, interaction: Interaction, generation: Choice[int] = None, timeout: Range[int, 15, 300] = 60) -> None:
 
 		# do I have permission to read and send messages here
-		permissions = interaction.channel.permissions_for(interaction.guild.me)
+		permissions = interaction.app_permissions
 		if permissions.read_messages == False or permissions.send_messages == False:
 			log.info('Missing permissions on this channel')
 			embed = guess_view.MissingPermissionsEmbed()
@@ -89,6 +188,7 @@ class GuessController(commands.Cog):
 
 		pokemon = self.guesserService.get_pokemon_by_id(choice)
 
+		# Create Guesser
 		now = datetime.utcnow()
 
 		guesser = Guesser(
@@ -100,10 +200,12 @@ class GuessController(commands.Cog):
 
 		self.guesserService.add_guesser(guesser)
 
+		# Send response
 		file = File(pokemon.hidden_img_path, filename='hidden.png')
-
 		embed = guess_view.HiddenEmbed(guesser, file)
 		await interaction.response.send_message(embed=embed, file=file)
+
+
 
 	@commands.Cog.listener()
 	async def on_message(self, message: Message):

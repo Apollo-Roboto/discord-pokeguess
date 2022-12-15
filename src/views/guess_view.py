@@ -84,7 +84,8 @@ class RevealedEmbed(Embed):
 		self.color = revealed_color
 		self.title = f'It\'s {guesser.pokemon.name}!'
 
-		self.add_field(name='Number', value=f'#{guesser.pokemon.id}')
+		number = guesser.pokemon.id if guesser.pokemon.id != None else 'Custom'
+		self.add_field(name='Number', value=f'#{number}')
 		self.add_field(name='Total Guesses', value=guesser.total_guesses)
 
 		self.set_image(url=f'attachment://{image_file.filename}')

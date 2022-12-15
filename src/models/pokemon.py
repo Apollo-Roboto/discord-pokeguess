@@ -1,9 +1,10 @@
 from pathlib import Path
 from dataclasses import dataclass
+from typing import Optional
 
 @dataclass
 class Pokemon:
 	name: str
-	id: int
+	id: Optional[int]
 	hidden_img_path: Path
 	revealed_img_path: Path
