@@ -17,6 +17,7 @@ REVEALED_IMG_DIR = Path('./pokemons/revealed/')
 
 
 class GuesserServiceException(Exception): pass
+class GuesserAlreadyActiveException(GuesserServiceException): pass
 
 
 
@@ -55,7 +56,7 @@ class GuesserService:
 
 	def add_guesser(self, guesser: Guesser) -> None:
 		if guesser.channel.id in self.active_guess:
-			raise GuesserServiceException()
+			raise GuesserAlreadyActiveException()
 
 		log.info(f'Creating a guesser for pokemon #{guesser.pokemon.id} in channel {guesser.channel.id}')
 		

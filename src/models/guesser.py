@@ -13,3 +13,4 @@ class Guesser:
 	author: Member
 	total_guesses: int = 0
 	winner: Member = None
+	hints_given = 0

@@ -6,6 +6,7 @@ from zalgo_text.zalgo import zalgo
 
 hidden_color = Color.from_str('#2f3136')
 revealed_color = Color.from_str('#2f3136')
+hint_color = Color.from_str('#2f3136')
 error_color = Color.from_str('#F73154')
 
 # The format is for the winner's name
@@ -24,6 +25,15 @@ failed_text: list[str] = [
 	'Let\'s play again!',
 	'Was it that hard?'
 ]
+close_answer_text: list[str] = [
+	'You\'re pretty close.',
+	'That\'s almost it!',
+	'So close!',
+	'You\'re almost there!',
+	'You\'re on the right track!',
+	'You\'re getting closer!',
+	'That\'s almost correct',
+]
 
 
 
@@ -32,6 +42,22 @@ class GenericErrorEmbed(Embed):
 		super().__init__()
 		self.color = error_color
 		self.title = 'An error happened, I Couldn\'t start the game'
+
+
+
+class ProcessingActiveEmbed(Embed):
+	def __init__(self):
+		super().__init__()
+		self.color = error_color
+		self.title = 'Wait a minute! Someone else is posting a custom image'
+
+
+
+class ProcessingFailedEmbed(Embed):
+	def __init__(self):
+		super().__init__()
+		self.color = error_color
+		self.title = 'I could not process this image, try another one.'
 
 
 
@@ -67,6 +93,35 @@ class AlreadyActiveEmbed(Embed):
 
 
 
+class CloseAnswerEmbed(Embed):
+	def __init__(self):
+		super().__init__()
+		self.color = hint_color
+		self.title = random.choice(close_answer_text)
+
+
+
+class HintEmbed(Embed):
+	def __init__(self, guesser: Guesser):
+		super().__init__()
+		self.color = hint_color
+
+		if guesser.hints_given >= 3:
+			self.title = 'I can\'t give more hints!'
+			return
+
+		self.title = 'Here is a hint'
+
+		self.description = 'The name is: '
+
+		for i in range(len(guesser.pokemon.name)):
+			if i <= guesser.hints_given:
+				self.description += ' ' + guesser.pokemon.name[i]
+			else:
+				self.description += ' \_'
+
+
+
 class HiddenEmbed(Embed):
 	def __init__(self, guesser: Guesser, image_file: File):
 		super().__init__()
@@ -82,7 +137,7 @@ class HiddenEmbed(Embed):
 		self.set_image(url=f'attachment://{image_file.filename}')
 
 		# For Debuging
-		# self.set_footer(text=guesser.pokemon.name)
+		self.set_footer(text=guesser.pokemon.name)
 
 
 
