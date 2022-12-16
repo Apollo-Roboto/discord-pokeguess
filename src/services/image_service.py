@@ -1,9 +1,6 @@
 
 from datetime import datetime
 from pathlib import Path
-import tempfile
-from discord import Attachment
-import uuid
 import logging
 import os
 from PIL import Image
@@ -81,7 +78,7 @@ class ImageService:
 
 
 	def get_background_image(self):
-		if self._background_image == None:
+		if self._background_image is None:
 			self._background_image = Image.open(BACKGROUND_PATH).resize(BACKGROUND_SIZE)
 
 		return self._background_image

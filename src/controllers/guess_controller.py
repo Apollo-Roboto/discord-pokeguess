@@ -1,20 +1,20 @@
 import os
 from datetime import datetime, timedelta
 import random
-from pathlib import Path 
+from pathlib import Path
 import logging
+import tempfile
+import uuid
 from discord.ext import commands
 from discord import app_commands, Interaction, File, Message
 from discord.app_commands import Choice, Range
 import discord
+import Levenshtein
 from models.guesser import Guesser
 from models.pokemon import Pokemon
 from views import guess_view
 from services.guesser_service import GuesserService, GuesserAlreadyActiveException
 from services.image_service import ImageService
-import tempfile
-import uuid
-import Levenshtein
 
 log = logging.getLogger(__name__.removesuffix('_controller'))
 
@@ -25,14 +25,15 @@ HIDDEN_DIR_TMP = Path(tempfile.gettempdir(), 'custompokemon', 'hidden')
 
 
 class GuessController(commands.Cog):
+	"""Handles request related to the pokeguess command."""
 
 	def __init__(self, bot: commands.Bot):
 		self.bot = bot
-		self.guesserService = GuesserService()
-		self.imageService = ImageService()
+		self.guesser_service = GuesserService()
+		self.image_service = ImageService()
 
 		# register the on_guess_end method to be called
-		self.guesserService.on_guesser_end_event.append(self.on_guess_end)
+		self.guesser_service.on_guesser_end_event.append(self.on_guess_end)
 
 		# keep track of wich channel is processing an image, prevents duplicated requests
 		self.image_being_processed: set[int] = set()
@@ -43,7 +44,8 @@ class GuessController(commands.Cog):
 			'give me an hint', 'give me help', 'give hint', 'give help', 'get hint', 'get help',
 			'i need a hint', 'i need an hint', 'i need hint', 'i need help', 'i want hint',
 			'i want a hint', 'i want an hint', 'i want help', 'can i get hint', 'can i get a hint',
-			'can i get an hint', 'can i get help', 'another hint', 'another help', 'hint please', 'help please'}
+			'can i get an hint', 'can i get help', 'another hint', 'another help', 'hint please',
+			'help please'}
 
 
 
@@ -56,17 +58,21 @@ class GuessController(commands.Cog):
 		image='Image of your custom pokemon. Please use an image with transparency',
 		timeout='Guessing timeout in seconds',
 	)
-	async def pokeguesscustom(self, interaction: Interaction, name: str, image: discord.Attachment, timeout: Range[int, 15, 300] = 60):
-		
+	async def pokeguesscustom(self,
+		interaction: Interaction,
+		name: str,
+		image: discord.Attachment,
+		timeout: Range[int, 15, 300] = 60):
+
 		# do I have permission to read and send messages here?
 		permissions = interaction.app_permissions
-		if permissions.read_messages == False or permissions.send_messages == False:
+		if permissions.read_messages is False or permissions.send_messages is False:
 			embed = guess_view.MissingPermissionsEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
 
 		# is there a running guesser here?
-		if self.guesserService.get_guesser(interaction.channel) != None:
+		if self.guesser_service.get_guesser(interaction.channel) is not None:
 			embed = guess_view.AlreadyActiveEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
@@ -83,7 +89,8 @@ class GuessController(commands.Cog):
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
 
-		log.info(f'Image: {image.filename} {image.width}x{image.height} {image.content_type} {image.size} bytes')
+		log.info(f'Image: {image.filename} {image.width}x{image.height}')
+		log.info(f'{image.content_type} {image.size} bytes')
 
 		# Only taking Images
 		if image.content_type not in self.allowed_content_type:
@@ -106,7 +113,7 @@ class GuessController(commands.Cog):
 		# Starting the process
 		try:
 			self.image_being_processed.add(interaction.channel.id)
-			self.imageService.process_image(file_path, hidden_file_path, revealed_file_path)
+			self.image_service.process_image(file_path, hidden_file_path, revealed_file_path)
 		except:
 			log.exception('Image processing failed')
 			embed = guess_view.ProcessingFailedEmbed()
@@ -138,7 +145,7 @@ class GuessController(commands.Cog):
 		)
 
 		try:
-			self.guesserService.add_guesser(guesser)
+			self.guesser_service.add_guesser(guesser)
 		except GuesserAlreadyActiveException:
 			embed = guess_view.AlreadyActiveEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -170,18 +177,21 @@ class GuessController(commands.Cog):
 		Choice(name='Generation 7', value=7),
 		Choice(name='Generation 8', value=8),
 	])
-	async def pokeguess_command(self, interaction: Interaction, generation: Choice[int] = None, timeout: Range[int, 15, 300] = 60) -> None:
+	async def pokeguess_command(self,
+		interaction: Interaction,
+		generation: Choice[int] = None,
+		timeout: Range[int, 15, 300] = 60) -> None:
 
 		# do I have permission to read and send messages here
 		permissions = interaction.app_permissions
-		if permissions.read_messages == False or permissions.send_messages == False:
+		if permissions.read_messages is False or permissions.send_messages is False:
 			log.info('Missing permissions on this channel')
 			embed = guess_view.MissingPermissionsEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
 
 		# is there a running guesser here?
-		if self.guesserService.get_guesser(interaction.channel) != None:
+		if self.guesser_service.get_guesser(interaction.channel) is not None:
 			embed = guess_view.AlreadyActiveEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
@@ -191,7 +201,7 @@ class GuessController(commands.Cog):
 			embed = guess_view.ProcessingActiveEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
-		
+
 		# max 5 minutes
 		if timeout > 300:
 			embed = guess_view.InvalidTimeoutEmbed()
@@ -200,9 +210,9 @@ class GuessController(commands.Cog):
 
 		id_range = (0, 905)
 
-		if generation == None:
+		if generation is None:
 			generation = Choice(name='All', value=0)
-		
+
 		if generation.value == 0: # all
 			id_range = (0, 905)
 		elif generation.value == 1:
@@ -224,7 +234,7 @@ class GuessController(commands.Cog):
 
 		choice = random.randint(*id_range)
 
-		pokemon = self.guesserService.get_pokemon_by_id(choice)
+		pokemon = self.guesser_service.get_pokemon_by_id(choice)
 
 		# Create Guesser
 		now = datetime.utcnow()
@@ -238,7 +248,7 @@ class GuessController(commands.Cog):
 			author=interaction.user,
 		)
 
-		self.guesserService.add_guesser(guesser)
+		self.guesser_service.add_guesser(guesser)
 
 		# Send response
 		file = File(pokemon.hidden_img_path, filename='hidden.png')
@@ -251,15 +261,15 @@ class GuessController(commands.Cog):
 	async def on_message(self, message: Message):
 
 		# bot filter
-		if message.author.bot == True:
+		if message.author.bot is True:
 			return
 
-		guesser = self.guesserService.get_guesser(message.channel)
-		
+		guesser = self.guesser_service.get_guesser(message.channel)
+
 		# if none, than there is no guesser for this channel
-		if guesser == None:
+		if guesser is None:
 			return
-		
+
 		guesser.total_guesses += 1
 
 		content = message.content.strip().lower()
@@ -267,7 +277,7 @@ class GuessController(commands.Cog):
 		# if guess is right
 		if content == guesser.pokemon.name.lower():
 			guesser.winner = message.author
-			await self.guesserService.end_guesser(message.channel)
+			await self.guesser_service.end_guesser(message.channel)
 			return
 
 		# Send a hint if the user is requesting it
@@ -304,4 +314,4 @@ class GuessController(commands.Cog):
 					log.exception('Could not remove custom pokemon')
 
 		except discord.errors.NotFound:
-			log.warn(f'The channel {guesser.channel.id} could not be found')
+			log.warning(f'The channel {guesser.channel.id} could not be found')

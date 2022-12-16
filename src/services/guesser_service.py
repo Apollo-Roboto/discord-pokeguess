@@ -1,13 +1,13 @@
 import os
 from pathlib import Path
 import logging
-from models.pokemon import Pokemon
-from models.guesser import Guesser
-from discord import TextChannel
-from discord.ext import tasks
-from datetime import datetime
 import re
 from typing import Union, Callable, Awaitable
+from datetime import datetime
+from discord import TextChannel
+from discord.ext import tasks
+from models.pokemon import Pokemon
+from models.guesser import Guesser
 
 log = logging.getLogger(__name__)
 
@@ -30,8 +30,9 @@ class GuesserService:
 
 		self.on_guesser_end_event: list[Callable[[Guesser], Awaitable[None]]] = []
 
+		# pylint: disable=no-member
 		self.end_guesses_loop.start()
-
+		# pylint: enable=no-member
 
 
 	def get_pokemon_by_id(self, pokemon_id):
@@ -59,7 +60,7 @@ class GuesserService:
 			raise GuesserAlreadyActiveException()
 
 		log.info(f'Creating a guesser for pokemon #{guesser.pokemon.id} in channel {guesser.channel.id}')
-		
+
 		self.active_guess[guesser.channel.id] = guesser
 
 	async def end_guesser(self, channel: TextChannel):
@@ -77,8 +78,8 @@ class GuesserService:
 
 		if isinstance(channel, int):
 			return self.active_guess.get(channel, None)
-		else:
-			return self.active_guess.get(channel.id, None)
+		
+		return self.active_guess.get(channel.id, None)
 
 	@tasks.loop(seconds=1)
 	async def end_guesses_loop(self):

@@ -1,8 +1,12 @@
+import logging
 from discord.ext import commands
 from discord import app_commands, Interaction, File
 from views import meta_view
 
+log = logging.getLogger(__name__.removesuffix('_controller'))
+
 class MetaController(commands.Cog):
+	"""Handles meta requests, this is more about giving information and resources to the user"""
 
 	def __init__(self, bot: commands.Bot):
 		self.bot = bot

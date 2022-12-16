@@ -4,8 +4,8 @@ from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass
 import json
-import requests
 import logging
+import requests
 
 log = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class PokedexService:
 			data = response.json()
 
 			log.info('Saving the Pokedex')
-			with open(POKEDEX, 'w') as f:
+			with open(POKEDEX, 'w', encoding='utf-8') as f:
 				json.dump(data, f)
 
 		return [Pokemon(**entry) for entry in data]

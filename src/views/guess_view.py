@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
-from discord import Embed, Color, File
-from models.guesser import Guesser
 import random
+from discord import Embed, Color, File
 from zalgo_text.zalgo import zalgo
+from models.guesser import Guesser
 
 hidden_color = Color.from_str('#2f3136')
 revealed_color = Color.from_str('#2f3136')
@@ -114,9 +114,9 @@ class HintEmbed(Embed):
 
 		self.description = 'The name is: '
 
-		for i in range(len(guesser.pokemon.name)):
+		for i, letter in enumerate(guesser.pokemon.name):
 			if i <= guesser.hints_given:
-				self.description += ' ' + guesser.pokemon.name[i]
+				self.description += ' ' + letter
 			else:
 				self.description += ' \_'
 
@@ -137,7 +137,7 @@ class HiddenEmbed(Embed):
 		self.set_image(url=f'attachment://{image_file.filename}')
 
 		# For Debuging
-		self.set_footer(text=guesser.pokemon.name)
+		# self.set_footer(text=guesser.pokemon.name)
 
 
 
@@ -154,25 +154,25 @@ class RevealedEmbed(Embed):
 
 		self.set_image(url=f'attachment://{image_file.filename}')
 
-		if guesser.winner != None:
+		if guesser.winner is not None:
 			winner = guesser.winner
 
 			self.description = random.choice(winner_text).format(winner.mention)
 
 			self.set_thumbnail(url=winner.display_avatar.url)
-		
+
 		else:
 			self.description = random.choice(failed_text)
 
 		# missingno easteregg
 		if guesser.pokemon.id == 0:
-			corruptEmbed(self)
+			corrupt_embed(self)
 
 
 
-def datetime_to_discord_timestamp(d: datetime) -> str:
+def datetime_to_discord_timestamp(dt: datetime) -> str:
 	# return int((d - datetime(1970, 1, 1)).total_seconds())
-	return f'<t:{int(d.replace(tzinfo=timezone.utc).timestamp())}:R>'
+	return f'<t:{int(dt.replace(tzinfo=timezone.utc).timestamp())}:R>'
 
 
 
@@ -182,12 +182,12 @@ text_corruptor.numAccentsDown = (1, 30)
 text_corruptor.numAccentsMiddle = (1, 5)
 text_corruptor.maxAccentsPerLetter = 10
 
-def corruptEmbed(embed: Embed):
+def corrupt_embed(embed: Embed):
 	embed.title = text_corruptor.zalgofy(embed.title)
 	embed.description = text_corruptor.zalgofy(embed.description)
-	if embed.footer != None and embed.footer.text != None:
+	if embed.footer is not None and embed.footer.text is not None:
 		embed.footer.text = text_corruptor.zalgofy(embed.footer.text)
-	if embed.author != None and embed.author.name != None:
+	if embed.author is not None and embed.author.name is not None:
 		embed.author.name = text_corruptor.zalgofy(embed.author.name)
 
 	# Need to clear and readd the fields, cannot change them otherwise

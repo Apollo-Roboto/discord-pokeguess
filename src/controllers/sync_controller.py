@@ -1,5 +1,8 @@
+import logging
 from discord.ext import commands
 from discord.ext.commands import Context
+
+log = logging.getLogger(__name__.removesuffix('_controller'))
 
 class SyncController(commands.Cog):
 
@@ -9,13 +12,12 @@ class SyncController(commands.Cog):
 	@commands.command()
 	@commands.is_owner()
 	async def sync(self, ctx: Context) -> None:
-		print('syncing')
+		log.info('syncing')
 		async with ctx.typing():
 			try:
 				synced = await ctx.bot.tree.sync()
-				print(f'Synced {len(synced)} commands ')
+				log.info(f'Synced {len(synced)} commands ')
 				await ctx.send(f'Synced {len(synced)} commands ')
-			except Exception as e:
-				print('error syncing')
-				print(e)
+			except:
+				log.exception('error syncing')
 				await ctx.send('error syncing')

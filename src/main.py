@@ -2,6 +2,7 @@ import logging
 import asyncio
 import os
 import sys
+from pathlib import Path
 from discord.ext import commands
 from discord import Intents, Interaction, InteractionType
 from discord.ext.prometheus import PrometheusCog, PrometheusLoggingHandler
@@ -9,7 +10,6 @@ from dotenv import load_dotenv
 import controllers
 from services.pokedex_service import PokedexService
 from services.image_service import ImageService
-from pathlib import Path
 
 logging.basicConfig(
 	stream=sys.stdout,
@@ -30,7 +30,7 @@ def download_pokemon_images():
 
 def process_pokemon_images():
 	log.info('Processing pokemon images')
-	imageService = ImageService()
+	image_service = ImageService()
 	for file in os.listdir(ORIGINAL_DIR):
 
 		original_path=Path(ORIGINAL_DIR, file)
@@ -41,7 +41,7 @@ def process_pokemon_images():
 		if hidden_path.exists() and revealed_path.exists():
 			continue
 
-		imageService.process_image(
+		image_service.process_image(
 			original_path=original_path,
 			hidden_path=hidden_path,
 			revealed_path=revealed_path,
