@@ -39,13 +39,16 @@ class GuesserService:
 		log.info(f'Searching for pokemon #{pokemon_id} in the file system')
 
 		for file in os.listdir(HIDDEN_IMG_DIR):
-			splitted_name = re.split(r'[_.]', file)
+			first_underscore = file.index('_')
+			last_dot = len(file) - file[::-1].index('.') - 1
 
-			if pokemon_id == int(splitted_name[0]):
+			pokemon_name = file[first_underscore+1:last_dot]
+
+			if pokemon_id == int(file[0:first_underscore]):
 
 				return Pokemon(
 					id=pokemon_id,
-					name=splitted_name[1],
+					name=pokemon_name,
 					hidden_img_path=Path(HIDDEN_IMG_DIR, file),
 					revealed_img_path=Path(REVEALED_IMG_DIR, file),
 					original_img_path=None, # Hiding it
@@ -72,7 +75,10 @@ class GuesserService:
 		log.info(f'Ending guesser for pokemon #{guesser.pokemon.id} in channel {channel.id}')
 
 		for event in self.on_guesser_end_event:
-			await event(guesser)
+			try:
+				await event(guesser)
+			except:
+				log.exception('Unhandled exception while calling on_guesser_end_event')
 
 	def get_guesser(self, channel: Union[TextChannel, int]) -> Guesser:
 
@@ -83,11 +89,13 @@ class GuesserService:
 
 	@tasks.loop(seconds=1)
 	async def end_guesses_loop(self):
-		channels = list(self.active_guess.keys())
+		try:
+			channels_ids = list(self.active_guess.keys())
 
-		for channel_id in channels:
-			guesser = self.get_guesser(channel_id)
+			for channel_id in channels_ids:
+				guesser = self.get_guesser(channel_id)
 
-			if guesser.end_time < datetime.utcnow():
-
-				await self.end_guesser(guesser.channel)
+				if guesser.end_time < datetime.utcnow():
+					await self.end_guesser(guesser.channel)
+		except:
+			pass

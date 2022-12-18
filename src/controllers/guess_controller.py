@@ -22,6 +22,14 @@ ORIGINAL_DIR_TMP = Path(tempfile.gettempdir(), 'custompokemon', 'originals')
 REVEALED_DIR_TMP = Path(tempfile.gettempdir(), 'custompokemon', 'revealed')
 HIDDEN_DIR_TMP = Path(tempfile.gettempdir(), 'custompokemon', 'hidden')
 
+ALLOWED_CONTENT_TYPE = ['image/png']
+HINT_REQUEST_TEXT = {'hint', 'help', 'help me', 'give me hint', 'give me a hint',
+			'give me an hint', 'give me help', 'give hint', 'give help', 'get hint', 'get help',
+			'i need a hint', 'i need an hint', 'i need hint', 'i need help', 'i want hint',
+			'i want a hint', 'i want an hint', 'i want help', 'can i get hint', 'can i get a hint',
+			'can i get an hint', 'can i get help', 'another hint', 'another help', 'hint please',
+			'help please'}
+
 
 
 class GuessController(commands.Cog):
@@ -37,15 +45,6 @@ class GuessController(commands.Cog):
 
 		# keep track of wich channel is processing an image, prevents duplicated requests
 		self.image_being_processed: set[int] = set()
-
-		self.allowed_content_type = ['image/png']
-
-		self.hint_request_text = {'hint', 'help', 'help me', 'give me hint', 'give me a hint',
-			'give me an hint', 'give me help', 'give hint', 'give help', 'get hint', 'get help',
-			'i need a hint', 'i need an hint', 'i need hint', 'i need help', 'i want hint',
-			'i want a hint', 'i want an hint', 'i want help', 'can i get hint', 'can i get a hint',
-			'can i get an hint', 'can i get help', 'another hint', 'another help', 'hint please',
-			'help please'}
 
 
 
@@ -63,6 +62,8 @@ class GuessController(commands.Cog):
 		name: str,
 		image: discord.Attachment,
 		timeout: Range[int, 15, 300] = 60):
+
+		log.info(f'Interaction: pokeguesscustom, name: \'{name}\', image filename: \'{image.filename}\', timeout: {timeout}')
 
 		# do I have permission to read and send messages here?
 		permissions = interaction.app_permissions
@@ -93,7 +94,7 @@ class GuessController(commands.Cog):
 		log.info(f'{image.content_type} {image.size} bytes')
 
 		# Only taking Images
-		if image.content_type not in self.allowed_content_type:
+		if image.content_type not in ALLOWED_CONTENT_TYPE:
 			embed = guess_view.InvalidMediaTypeEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
@@ -181,6 +182,8 @@ class GuessController(commands.Cog):
 		interaction: Interaction,
 		generation: Choice[int] = None,
 		timeout: Range[int, 15, 300] = 60) -> None:
+
+		log.info(f'Interaction: pokeguess, generation: {generation}, timeout: {timeout}')
 
 		# do I have permission to read and send messages here
 		permissions = interaction.app_permissions
@@ -281,7 +284,7 @@ class GuessController(commands.Cog):
 			return
 
 		# Send a hint if the user is requesting it
-		if content in self.hint_request_text:
+		if content in HINT_REQUEST_TEXT:
 			embed = guess_view.HintEmbed(guesser)
 			await message.channel.send(embed=embed)
 			guesser.hints_given += 1
@@ -297,7 +300,6 @@ class GuessController(commands.Cog):
 
 
 	async def on_guess_end(self, guesser: Guesser):
-
 		try:
 			file = File(guesser.pokemon.revealed_img_path)
 			embed = guess_view.RevealedEmbed(guesser, file)
