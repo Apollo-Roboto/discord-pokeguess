@@ -8,11 +8,14 @@ from discord import TextChannel
 from discord.ext import tasks
 from models.pokemon import Pokemon
 from models.guesser import Guesser
+from prometheus_client import Counter
 
 log = logging.getLogger(__name__)
 
 HIDDEN_IMG_DIR = Path('./pokemons/hidden/')
 REVEALED_IMG_DIR = Path('./pokemons/revealed/')
+
+POKEGUESS_RESULT_COUNTER = Counter('pokeguess_guess_result' ,'The outcome of a pokeguess, did the users got the right answer?', ['outcome'])
 
 
 
@@ -73,6 +76,13 @@ class GuesserService:
 		guesser = self.active_guess.pop(channel.id)
 
 		log.info(f'Ending guesser for pokemon #{guesser.pokemon.id} in channel {channel.id}')
+
+		if guesser.winner is None:
+			POKEGUESS_RESULT_COUNTER.labels('lose').inc()
+			log.info('Users lost')
+		else:
+			log.info(f'User {guesser.winner.id} won')
+			POKEGUESS_RESULT_COUNTER.labels('win').inc()
 
 		for event in self.on_guesser_end_event:
 			try:

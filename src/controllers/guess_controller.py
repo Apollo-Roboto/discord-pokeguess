@@ -15,12 +15,16 @@ from models.pokemon import Pokemon
 from views import guess_view
 from services.guesser_service import GuesserService, GuesserAlreadyActiveException
 from services.image_service import ImageService
+from prometheus_client import Counter
 
 log = logging.getLogger(__name__.removesuffix('_controller'))
 
 ORIGINAL_DIR_TMP = Path(tempfile.gettempdir(), 'custompokemon', 'originals')
 REVEALED_DIR_TMP = Path(tempfile.gettempdir(), 'custompokemon', 'revealed')
 HIDDEN_DIR_TMP = Path(tempfile.gettempdir(), 'custompokemon', 'hidden')
+
+POKEGUESS_ATTEMPS_COUNTER = Counter('pokeguess_guess_attemps' ,'How many attemps were made by users')
+POKEGUESS_HINTS_COUNTER = Counter('pokeguess_guess_hints' ,'How many hints were given')
 
 ALLOWED_CONTENT_TYPE = ['image/png']
 HINT_REQUEST_TEXT = {'hint', 'help', 'help me', 'give me hint', 'give me a hint',
@@ -67,25 +71,33 @@ class GuessController(commands.Cog):
 
 		# do I have permission to read and send messages here?
 		permissions = interaction.app_permissions
-		if permissions.read_messages is False or permissions.send_messages is False:
+		if permissions.read_messages is False or permissions.send_messages is False or permissions.attach_files is False:
+			log.warning('Missing permissions')
+			log.info('Sending MissingPermissionsEmbed')
 			embed = guess_view.MissingPermissionsEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
 
 		# is there a running guesser here?
 		if self.guesser_service.get_guesser(interaction.channel) is not None:
+			log.warning('There is already an active guesser')
+			log.info('Sending AlreadyActiveEmbed')
 			embed = guess_view.AlreadyActiveEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
 
 		# is there an image being processed here?
 		if interaction.channel.id in self.image_being_processed:
+			log.warning('There is already an image being processed here')
+			log.info('Sending ProcessingActiveEmbed')
 			embed = guess_view.ProcessingActiveEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
 
 		# max 5 minutes
 		if timeout > 300:
+			log.warning(f'Invalid timeout, was {timeout}')
+			log.info('Sending InvalidTimeoutEmbed')
 			embed = guess_view.InvalidTimeoutEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
@@ -95,6 +107,8 @@ class GuessController(commands.Cog):
 
 		# Only taking Images
 		if image.content_type not in ALLOWED_CONTENT_TYPE:
+			log.warning(f'Invalid content_type, was {image.content_type}')
+			log.info('Sending InvalidMediaTypeEmbed')
 			embed = guess_view.InvalidMediaTypeEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
@@ -117,6 +131,7 @@ class GuessController(commands.Cog):
 			self.image_service.process_image(file_path, hidden_file_path, revealed_file_path)
 		except:
 			log.exception('Image processing failed')
+			log.info('Sending ProcessingFailedEmbed')
 			embed = guess_view.ProcessingFailedEmbed()
 			interaction.response.send_message(embed=embed, ephemeral=True)
 			return
@@ -148,12 +163,15 @@ class GuessController(commands.Cog):
 		try:
 			self.guesser_service.add_guesser(guesser)
 		except GuesserAlreadyActiveException:
+			log.warning('Could not send custom pokemon, there is already an active guesser')
+			log.info('Sending AlreadyActiveEmbed')
 			embed = guess_view.AlreadyActiveEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
 
 		# Send response
 		file = File(pokemon.hidden_img_path, filename='hidden.png')
+		log.info('Sending HiddenEmbed')
 		embed = guess_view.HiddenEmbed(guesser, file)
 		await interaction.response.send_message(embed=embed, file=file)
 
@@ -188,25 +206,32 @@ class GuessController(commands.Cog):
 		# do I have permission to read and send messages here
 		permissions = interaction.app_permissions
 		if permissions.read_messages is False or permissions.send_messages is False:
-			log.info('Missing permissions on this channel')
+			log.warning('Missing permissions on this channel')
+			log.info('Sending MissingPermissionsEmbed')
 			embed = guess_view.MissingPermissionsEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
 
 		# is there a running guesser here?
 		if self.guesser_service.get_guesser(interaction.channel) is not None:
+			log.warning('There is already an active guesser')
+			log.info('Sending AlreadyActiveEmbed')
 			embed = guess_view.AlreadyActiveEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
 
 		# is there an image being processed here?
 		if interaction.channel.id in self.image_being_processed:
+			log.warning('There is already an image being processed here')
+			log.info('Sending ProcessingActiveEmbed')
 			embed = guess_view.ProcessingActiveEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
 
 		# max 5 minutes
 		if timeout > 300:
+			log.warning(f'Invalid timeout, was {timeout}')
+			log.info('Sending InvalidTimeoutEmbed')
 			embed = guess_view.InvalidTimeoutEmbed()
 			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
@@ -255,6 +280,7 @@ class GuessController(commands.Cog):
 
 		# Send response
 		file = File(pokemon.hidden_img_path, filename='hidden.png')
+		log.info('Sending HiddenEmbed')
 		embed = guess_view.HiddenEmbed(guesser, file)
 		await interaction.response.send_message(embed=embed, file=file)
 
@@ -269,11 +295,12 @@ class GuessController(commands.Cog):
 
 		guesser = self.guesser_service.get_guesser(message.channel)
 
-		# if none, than there is no guesser for this channel
+		# if none, than there is no active guesser for this channel
 		if guesser is None:
 			return
 
 		guesser.total_guesses += 1
+		POKEGUESS_ATTEMPS_COUNTER.inc()
 
 		content = message.content.strip().lower()
 
@@ -285,6 +312,9 @@ class GuessController(commands.Cog):
 
 		# Send a hint if the user is requesting it
 		if content in HINT_REQUEST_TEXT:
+			POKEGUESS_HINTS_COUNTER.inc()
+			log.info(f'User {message.author.id} requested a hint, hints given: {guesser.hints_given + 1}')
+			log.info('Sending HintEmbed')
 			embed = guess_view.HintEmbed(guesser)
 			await message.channel.send(embed=embed)
 			guesser.hints_given += 1
@@ -292,9 +322,10 @@ class GuessController(commands.Cog):
 
 		# The user is very close to the answer
 		if Levenshtein.distance(content, guesser.pokemon.name.lower()) == 1:
+			log.info(f'User {message.author.id} almost got it')
+			log.info('Sending CloseAnswerEmbed')
 			embed = guess_view.CloseAnswerEmbed()
 			await message.reply(embed=embed)
-			guesser.hints_given += 1
 			return
 
 
@@ -302,6 +333,7 @@ class GuessController(commands.Cog):
 	async def on_guess_end(self, guesser: Guesser):
 		try:
 			file = File(guesser.pokemon.revealed_img_path)
+			log.info('Sending RevealedEmbed')
 			embed = guess_view.RevealedEmbed(guesser, file)
 			await guesser.channel.send(embed=embed, file=file)
 

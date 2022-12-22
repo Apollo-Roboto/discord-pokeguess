@@ -10,12 +10,13 @@ from dotenv import load_dotenv
 import controllers
 from services.pokedex_service import PokedexService
 from services.image_service import ImageService
+from rich.logging import RichHandler
 
 logging.basicConfig(
 	stream=sys.stdout,
 	level=logging.INFO,
 	datefmt='%Y-%m-%d %H:%M:%S',
-	format='%(levelname)s [ %(asctime)s ] %(name)s : %(message)s',
+	format='%(asctime)s %(levelname)-7s %(name)-25s %(message)s',
 )
 logging.getLogger().addHandler(PrometheusLoggingHandler())
 log = logging.getLogger(__name__)
@@ -72,16 +73,6 @@ async def main():
 	log.info("Commands:")
 	for command in bot.walk_commands():
 		log.info(f'\t{command.name}')
-
-	@bot.listen()
-	async def on_interaction(interaction: Interaction):
-		# command name can be None if comming from a view (like a button click)
-
-		text = f'Interaction ({str(interaction.type.name)})'
-		if interaction.type == InteractionType.application_command:
-			text += f' {interaction.command.name} id:{interaction.data["id"]}'
-
-		log.info(text)
 
 	# Prepare the data before running the bot
 	download_pokemon_images()
