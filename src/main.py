@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 import controllers
 from services.pokedex_service import PokedexService
 from services.image_service import ImageService
-from rich.logging import RichHandler
 
 logging.basicConfig(
 	stream=sys.stdout,
