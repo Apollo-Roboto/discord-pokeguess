@@ -3,7 +3,7 @@ jsonschema
 python-dotenv
 requests
 discord.py==2.1.0
-discord-ext-prometheus==0.0.5
+discord-ext-prometheus==0.1.1
 pillow==9.3.0
 zalgo-text==0.6
 Levenshtein==0.20.8

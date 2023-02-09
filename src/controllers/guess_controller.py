@@ -133,7 +133,7 @@ class GuessController(commands.Cog):
 			log.exception('Image processing failed')
 			log.info('Sending ProcessingFailedEmbed')
 			embed = guess_view.ProcessingFailedEmbed()
-			interaction.response.send_message(embed=embed, ephemeral=True)
+			await interaction.response.send_message(embed=embed, ephemeral=True)
 			return
 		finally:
 			if interaction.channel.id in self.image_being_processed:
