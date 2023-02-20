@@ -111,6 +111,10 @@ class ImageService:
 		original_img = Image.open(original_path, 'r')
 		original_img = self.scale(original_img, POKEMON_SIZE)
 
+		# Convert the image to RGBA
+		if(original_img.mode == 'P'):
+			original_img = original_img.convert(mode='RGBA')
+
 		# Create original image and scaling the canvas to the background
 		original_img = self.layer_images([
 			Image.new('RGBA', BACKGROUND_SIZE, (0,0,0,0)),
