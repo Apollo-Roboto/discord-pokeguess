@@ -12,100 +12,105 @@ from prometheus_client import Counter
 
 log = logging.getLogger(__name__)
 
-HIDDEN_IMG_DIR = Path('./pokemons/hidden/')
-REVEALED_IMG_DIR = Path('./pokemons/revealed/')
+HIDDEN_IMG_DIR = Path("./pokemons/hidden/")
+REVEALED_IMG_DIR = Path("./pokemons/revealed/")
 
-POKEGUESS_RESULT_COUNTER = Counter('pokeguess_guess_result' ,'The outcome of a pokeguess, did the users got the right answer?', ['outcome'])
+POKEGUESS_RESULT_COUNTER = Counter(
+    "pokeguess_guess_result",
+    "The outcome of a pokeguess, did the users got the right answer?",
+    ["outcome"],
+)
 
 
+class GuesserServiceException(Exception):
+    pass
 
-class GuesserServiceException(Exception): pass
-class GuesserAlreadyActiveException(GuesserServiceException): pass
 
+class GuesserAlreadyActiveException(GuesserServiceException):
+    pass
 
 
 class GuesserService:
+    def __init__(self) -> None:
+        # Guesser by channel_id
+        self.active_guess: dict[int, Guesser] = {}
 
-	def __init__(self) -> None:
+        self.on_guesser_end_event: list[Callable[[Guesser], Awaitable[None]]] = []
 
-		# Guesser by channel_id
-		self.active_guess: dict[int, Guesser] = {}
+        # pylint: disable=no-member
+        self.end_guesses_loop.start()
+        # pylint: enable=no-member
 
-		self.on_guesser_end_event: list[Callable[[Guesser], Awaitable[None]]] = []
+    def get_pokemon_by_id(self, pokemon_id):
+        log.info(f"Searching for pokemon #{pokemon_id} in the file system")
 
-		# pylint: disable=no-member
-		self.end_guesses_loop.start()
-		# pylint: enable=no-member
+        for file in os.listdir(HIDDEN_IMG_DIR):
+            first_underscore = file.index("_")
+            last_dot = len(file) - file[::-1].index(".") - 1
 
+            pokemon_name = file[first_underscore + 1 : last_dot]
 
-	def get_pokemon_by_id(self, pokemon_id):
-		log.info(f'Searching for pokemon #{pokemon_id} in the file system')
+            if pokemon_id == int(file[0:first_underscore]):
+                return Pokemon(
+                    id=pokemon_id,
+                    name=pokemon_name,
+                    hidden_img_path=Path(HIDDEN_IMG_DIR, file),
+                    revealed_img_path=Path(REVEALED_IMG_DIR, file),
+                    original_img_path=None,  # Hiding it
+                )
 
-		for file in os.listdir(HIDDEN_IMG_DIR):
-			first_underscore = file.index('_')
-			last_dot = len(file) - file[::-1].index('.') - 1
+        log.error(f"Pokemon #{pokemon_id} not found")
 
-			pokemon_name = file[first_underscore+1:last_dot]
+        return None
 
-			if pokemon_id == int(file[0:first_underscore]):
+    def add_guesser(self, guesser: Guesser) -> None:
+        if guesser.channel.id in self.active_guess:
+            raise GuesserAlreadyActiveException()
 
-				return Pokemon(
-					id=pokemon_id,
-					name=pokemon_name,
-					hidden_img_path=Path(HIDDEN_IMG_DIR, file),
-					revealed_img_path=Path(REVEALED_IMG_DIR, file),
-					original_img_path=None, # Hiding it
-				)
+        log.info(
+            f"Creating a guesser for pokemon #{guesser.pokemon.id} in channel {guesser.channel.id}"
+        )
 
-		log.error(f'Pokemon #{pokemon_id} not found')
+        self.active_guess[guesser.channel.id] = guesser
 
-		return None
+    async def end_guesser(self, channel: TextChannel):
+        if channel.id not in self.active_guess:
+            raise GuesserServiceException()
 
-	def add_guesser(self, guesser: Guesser) -> None:
-		if guesser.channel.id in self.active_guess:
-			raise GuesserAlreadyActiveException()
+        guesser = self.active_guess.pop(channel.id)
 
-		log.info(f'Creating a guesser for pokemon #{guesser.pokemon.id} in channel {guesser.channel.id}')
+        log.info(
+            f"Ending guesser for pokemon #{guesser.pokemon.id} in channel {channel.id}"
+        )
 
-		self.active_guess[guesser.channel.id] = guesser
+        if guesser.winner is None:
+            POKEGUESS_RESULT_COUNTER.labels("lose").inc()
+            log.info("Users lost")
+        else:
+            log.info(f"User {guesser.winner.id} won")
+            POKEGUESS_RESULT_COUNTER.labels("win").inc()
 
-	async def end_guesser(self, channel: TextChannel):
-		if channel.id not in self.active_guess:
-			raise GuesserServiceException()
+        for event in self.on_guesser_end_event:
+            try:
+                await event(guesser)
+            except:
+                log.exception("Unhandled exception while calling on_guesser_end_event")
 
-		guesser = self.active_guess.pop(channel.id)
+    def get_guesser(self, channel: Union[TextChannel, int]) -> Guesser:
+        if isinstance(channel, int):
+            return self.active_guess.get(channel, None)
 
-		log.info(f'Ending guesser for pokemon #{guesser.pokemon.id} in channel {channel.id}')
+        return self.active_guess.get(channel.id, None)
 
-		if guesser.winner is None:
-			POKEGUESS_RESULT_COUNTER.labels('lose').inc()
-			log.info('Users lost')
-		else:
-			log.info(f'User {guesser.winner.id} won')
-			POKEGUESS_RESULT_COUNTER.labels('win').inc()
+    @tasks.loop(seconds=1)
+    async def end_guesses_loop(self):
+        try:
+            channels_ids = list(self.active_guess.keys())
 
-		for event in self.on_guesser_end_event:
-			try:
-				await event(guesser)
-			except:
-				log.exception('Unhandled exception while calling on_guesser_end_event')
+            for channel_id in channels_ids:
+                guesser = self.get_guesser(channel_id)
 
-	def get_guesser(self, channel: Union[TextChannel, int]) -> Guesser:
-
-		if isinstance(channel, int):
-			return self.active_guess.get(channel, None)
-		
-		return self.active_guess.get(channel.id, None)
-
-	@tasks.loop(seconds=1)
-	async def end_guesses_loop(self):
-		try:
-			channels_ids = list(self.active_guess.keys())
-
-			for channel_id in channels_ids:
-				guesser = self.get_guesser(channel_id)
-
-				if guesser.end_time < datetime.utcnow():
-					await self.end_guesser(guesser.channel)
-		except:
-			pass
+                if guesser.end_time < datetime.utcnow():
+                    await self.end_guesser(guesser.channel)
+        except:
+            pass

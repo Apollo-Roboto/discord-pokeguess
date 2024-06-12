@@ -1,6 +1,6 @@
 [project]
 name = "discord-pokeguess"
-version = "0.2.0"
+version = "0.1.0"
 authors = [{ name = "Apollo-Roboto", email = "Apollo_Roboto@outlook.com" }]
 description = "Who's That Pokemon! "
 readme = "README.md"
