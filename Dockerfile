@@ -5,7 +5,7 @@ COPY . /app
 WORKDIR /app
 
 # install dependencies
-RUN pip install -r requirements.txt
+RUN pip install .
 
 # startup command
 CMD ["python", "./src/main.py"]

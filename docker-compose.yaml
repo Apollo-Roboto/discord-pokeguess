@@ -1,4 +1,3 @@
-version: '3.8'
 name: pokeguess
 services:
 
@@ -12,7 +11,7 @@ services:
         source: pokemonData
         target: /app/pokemons
     ports:
-      - 8001:8000
+      - 8000:8000
 
 volumes:
   pokemonData:

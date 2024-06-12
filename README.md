@@ -25,7 +25,7 @@ DISCORD_APPLICATION_ID=
 
 Install dependencies
 ```bash
-python -m pip install -r ./requirements.txt
+python -m pip install .
 ```
 
 Run the bot.
